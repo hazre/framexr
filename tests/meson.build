@@ -1,3 +1,6 @@
+if get_option('system-deps').allowed()
+  gtest_dep = dependency('gtest')
+else
 googletest_root = meson.project_source_root() / 'external/googletest/googletest'
 
 gtest_lib = static_library(
@@ -14,6 +17,7 @@ gtest_dep = declare_dependency(
   include_directories: include_directories('../external/googletest/googletest/include', is_system: true),
   dependencies: threads_dep,
 )
+endif
 
 test_support_inc = include_directories('support')
 test_env = {'XDG_CONFIG_HOME': meson.current_build_dir() / 'config-home', 'FRAMEXR_LOG': 'warn'}
