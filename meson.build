@@ -52,23 +52,39 @@ endif
 
 # ---------------------------------------------------------------------------
 # Vendored libraries (git submodules in external/)
+# system-deps swaps submodules for system packages except miniaudio.
 # ---------------------------------------------------------------------------
 
-foreach sub : ['eigen', 'json', 'yaml-cpp', 'miniaudio', 'VulkanMemoryAllocator',
-               'openvr', 'OpenXR-SDK']
+sysdeps = get_option('system-deps').allowed()
+
+required_submodules = ['miniaudio']
+if not sysdeps
+  required_submodules += ['eigen', 'json', 'yaml-cpp', 'openvr', 'googletest',
+                          'VulkanMemoryAllocator', 'OpenXR-SDK']
+endif
+
+foreach sub : required_submodules
   if not fs.is_dir('external' / sub / '.git') and not fs.is_file('external' / sub / '.git')
     error('Submodule external/@0@ is missing; run: git submodule update --init'.format(sub))
   endif
 endforeach
 
-eigen_dep = declare_dependency(
-  include_directories: include_directories('external/eigen', is_system: true),
-)
+if sysdeps
+  eigen_dep = dependency('eigen3')
+  json_dep = dependency('nlohmann_json')
+else
+  eigen_dep = declare_dependency(
+    include_directories: include_directories('external/eigen', is_system: true),
+  )
 
-json_dep = declare_dependency(
-  include_directories: include_directories('external/json/include', is_system: true),
-)
+  json_dep = declare_dependency(
+    include_directories: include_directories('external/json/include', is_system: true),
+  )
+endif
 
+if sysdeps
+  yaml_cpp_dep = dependency('yaml-cpp')
+else
 yaml_cpp_lib = static_library(
   'yaml-cpp',
   files(
@@ -112,6 +128,7 @@ yaml_cpp_dep = declare_dependency(
   include_directories: include_directories('external/yaml-cpp/include', is_system: true),
   compile_args: ['-DYAML_CPP_STATIC_DEFINE'],
 )
+endif
 
 miniaudio_dep = declare_dependency(
   include_directories: include_directories('external/miniaudio', is_system: true),

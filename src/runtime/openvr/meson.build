@@ -3,6 +3,9 @@ openvr_deps = []
 openvr_generated = []
 
 if get_option('openvr').allowed()
+if sysdeps
+  openvr_deps += dependency('openvr')
+else
   openvr_root = meson.project_source_root() / 'external/openvr'
   openvr_api_lib = static_library(
     'openvr_api',
@@ -30,6 +33,7 @@ if get_option('openvr').allowed()
     compile_args: ['-DOPENVR_BUILD_STATIC'],
     dependencies: [dl_dep] + (is_windows ? [cpp.find_library('advapi32'), cpp.find_library('shell32')] : []),
   )
+endif
 
   openvr_sources += files(
     'OpenVrInput.cpp',
