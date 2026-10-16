@@ -8,3 +8,5 @@ option('x11', type: 'feature', value: 'enabled',
        description: 'X11 desktop capture (XShm) and keymap support')
 option('wayland', type: 'feature', value: 'enabled',
        description: 'Wayland desktop capture (wlr protocols + PipeWire)')
+option('system-deps', type: 'feature', value: 'disabled',
+       description: 'Use system packages (eigen3, nlohmann_json, yaml-cpp, openvr, gtest) instead of external/ submodules')
