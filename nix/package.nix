@@ -43,6 +43,13 @@ stdenv.mkDerivation (finalAttrs: {
     for d in external/*/; do mkdir -p "$d/.git"; done
   '';
 
+  # WiVRn's in-headset launcher lists entries whose Categories contain
+  # X-WiVRn-VR; install the same file the AppImage uses.
+  postInstall = ''
+    install -Dm644 ${../framexr.desktop} $out/share/applications/framexr.desktop
+    install -Dm644 ${../framexr.png} $out/share/icons/hicolor/256x256/apps/framexr.png
+  '';
+
   # Upstream defaults to werror=true; Nix hardening trips it.
   mesonFlags = [
     "-Dwerror=false"
