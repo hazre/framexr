@@ -159,6 +159,25 @@ auto Container::CreateEmpty() -> std::unique_ptr<Container>
     return std::unique_ptr<Container>(new Container());
 }
 
+auto Container::FitScreensToHeadset() -> void
+{
+    const auto density = g_interaction->DisplayPixelsPerRadian();
+    if (density.minCoeff() <= 0.0f)
+    {
+        return;
+    }
+    auto desktops = Desktops();
+    bool fitted = false;
+    for (auto* desktop : desktops)
+    {
+        fitted |= desktop->FitSpawnToHeadset(density);
+    }
+    if (fitted)
+    {
+        Desktop::ArrangeInFrontOfHead(desktops);
+    }
+}
+
 auto Container::ById(OverlayId id) -> View*
 {
     const auto it = std::ranges::find_if(m_views, [id](const auto& overlay) -> bool { return overlay->Id() == id; });

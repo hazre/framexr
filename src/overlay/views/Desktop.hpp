@@ -72,6 +72,7 @@ class Desktop final : public View
     static auto CreateWindows() -> Result<std::vector<std::unique_ptr<Desktop>>>;
 #endif
     static auto ArrangeInFrontOfHead(std::span<const std::unique_ptr<Desktop>> desktops) -> void;
+    static auto ArrangeInFrontOfHead(std::span<Desktop* const> desktops) -> void;
     static auto SelectScreen(std::string_view instructions, const ScreenCastOptions& options) -> Result<ScreenSelection>;
 
     [[nodiscard]] auto Output() const -> uint32_t { return m_output; }
@@ -79,6 +80,10 @@ class Desktop final : public View
 
     auto SetOutput(uint32_t output) -> void { m_output = output; }
     auto SetInput(ScreenInteraction input) -> void { m_input = input; }
+
+    // One capture pixel per headset pixel along the limiting axis, from the runtime's
+    // pixels per tangent unit. Returns true only the first time it changes the spawn scale.
+    auto FitSpawnToHeadset(const Eigen::Vector2f& density) -> bool;
 
     auto OnHover(const PointerHit& hit) -> std::optional<Haptics> override;
     auto OnPointer(const PointerHit& hit, bool pressed) -> void override;
@@ -88,4 +93,5 @@ class Desktop final : public View
     ScreenInteraction m_input;
     Eigen::Vector2i m_position;
     uint32_t m_output = 0;
+    bool m_spawn_fitted = false;
 };

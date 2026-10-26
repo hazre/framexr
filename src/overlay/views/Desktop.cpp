@@ -25,6 +25,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <format>
 #include <fstream>
@@ -81,6 +82,10 @@ constexpr float kScreenDistance = 1.0f;
 constexpr float kScreenGap = 0.05f;
 
 constexpr float kScreenTilt = 0.1745f;
+
+// Screens larger than this fill more of the view than any headset can show, and
+// clamping keeps 4K/8K desktops from needing impossible world sizes to stay 1:1.
+constexpr float kMaxScreenAngle = 2.0f * std::numbers::pi_v<float> / 3.0f;
 
 #if FRAMEXR_FEATURE_X11 && FRAMEXR_FEATURE_PIPEWIRE
 
@@ -185,13 +190,39 @@ Desktop::Desktop(
     SetInteractionTransform(interaction_transform);
 }
 
+auto Desktop::FitSpawnToHeadset(const Eigen::Vector2f& density) -> bool
+{
+    const auto extent = ExtentHint();
+    if (m_spawn_fitted || extent.width == 0 || extent.height == 0 || density.minCoeff() <= 0.0f)
+    {
+        return false;
+    }
+    // WiVRn reports the headset panel size through XrViewConfigurationView's
+    // recommendedImageRect*, and DisplayDensity turns that into pixels per tangent
+    // unit, so one capture pixel per headset pixel needs major / density tangent
+    // units of width at the spawn distance.
+    const auto major = static_cast<float>(std::max(extent.width, extent.height));
+    const float max_scale = 2.0f * kScreenDistance * std::tan(kMaxScreenAngle / 2.0f);
+    const float native = kScreenDistance * major / density.minCoeff() * g_config->desktop_view_scale;
+    SetSpawnScale(std::min(native, max_scale));
+    m_spawn_fitted = true;
+    return true;
+}
+
 auto Desktop::ArrangeInFrontOfHead(std::span<const std::unique_ptr<Desktop>> desktops) -> void
 {
-    std::vector<Desktop*> ordered;
+    std::vector<Desktop*> pointers;
+    pointers.reserve(desktops.size());
     for (const auto& desktop : desktops)
     {
-        ordered.push_back(desktop.get());
+        pointers.push_back(desktop.get());
     }
+    ArrangeInFrontOfHead(pointers);
+}
+
+auto Desktop::ArrangeInFrontOfHead(std::span<Desktop* const> desktops) -> void
+{
+    std::vector<Desktop*> ordered(desktops.begin(), desktops.end());
     std::ranges::sort(
         ordered,
         [](const Desktop* a, const Desktop* b) -> bool
@@ -206,7 +237,11 @@ auto Desktop::ArrangeInFrontOfHead(std::span<const std::unique_ptr<Desktop>> des
     for (size_t i = 0; i < ordered.size(); ++i)
     {
         auto& state = *ordered[i];
-        const float step = 2.0f * std::atan((state.SpawnScale() + kScreenGap) / (2.0f * kScreenDistance));
+        const auto extent = state.ExtentHint();
+        const float aspect = extent.height > 0 ? static_cast<float>(extent.width) / static_cast<float>(extent.height) : 1.0f;
+        // SpawnScale is the quad's major dimension: the width in landscape, the height in portrait.
+        const float width = aspect < 1.0f ? state.SpawnScale() * aspect : state.SpawnScale();
+        const float step = 2.0f * std::atan((width + kScreenGap) / (2.0f * kScreenDistance));
         const float angle = (static_cast<float>(i) - middle) * step;
         state.SetSpawnPoint(
             kScreenDistance
@@ -372,9 +407,10 @@ auto Desktop::CreateWayland(WaylandClient& client, std::span<Desktop* const> exi
         }
 
         const auto transform = WaylandClient::ToFrameTransform(output.transform);
+        const auto pixel_size = output.size.x() > 0 && output.size.y() > 0 ? output.size : output.logical_size;
         auto desktop = std::make_unique<Desktop>(
             output.name,
-            output.logical_size,
+            pixel_size,
             transform,
             output.logical_position,
             std::move(renderer),

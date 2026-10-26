@@ -74,6 +74,10 @@ class Container final
     [[nodiscard]] auto Views() const -> const std::vector<std::unique_ptr<View>>& { return m_views; }
     [[nodiscard]] auto Desktops() const -> std::vector<Desktop*>;
 
+    // Sizes newly spawned screens so one capture pixel lands on one headset pixel,
+    // using the density the runtime reports once the session is running.
+    auto FitScreensToHeadset() -> void;
+
     auto ById(OverlayId id) -> View*;
     auto ByName(std::string_view name) -> View*;
     auto BySelector(const OverlaySelector& selector) -> View*;
