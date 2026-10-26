@@ -220,6 +220,7 @@ auto Runtime::Loop(std::atomic<bool>& running) -> Result<>
         DispatchTasks();
 
         RETURN_IF_ERROR(UpdateInput());
+        m_overlays->FitScreensToHeadset();
         for (auto& view : m_overlays->Views())
         {
             view->AutoMovement();

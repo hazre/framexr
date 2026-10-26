@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <deque>
 #include <format>
@@ -677,6 +678,130 @@ TEST_F(LaserInteraction, DefaultLayoutArcsScreensAroundTheHead)
         const Eigen::Vector3f facing = screen->SpawnRotation() * Eigen::Vector3f::UnitZ();
         EXPECT_TRUE(facing.isApprox(-screen->SpawnPoint().normalized(), 1e-4f)) << screen->Name();
     }
+}
+
+TEST_F(LaserInteraction, ScreensFitOneCapturePixelPerHeadsetPixel)
+{
+    g_config->desktop_view_scale = 1.0f;
+    Desktop screen(
+        "screen",
+        Eigen::Vector2i(1920, 1080),
+        FrameTransform::Normal,
+        Eigen::Vector2i(0, 0),
+        nullptr,
+        ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+    );
+
+    EXPECT_FALSE(screen.FitSpawnToHeadset(Eigen::Vector2f::Zero()));
+    EXPECT_FLOAT_EQ(screen.SpawnScale(), 1.5f);
+
+    // WiVRn exposes the headset panel size as recommendedImageRectWidth/Height, so
+    // 2064 px over a 104 degree FOV is 806 px per tangent unit.
+    ASSERT_TRUE(screen.FitSpawnToHeadset(Eigen::Vector2f(806.0f, 960.0f)));
+    EXPECT_NEAR(screen.SpawnScale(), 1920.0f / 806.0f, 1e-4f);
+
+    EXPECT_FALSE(screen.FitSpawnToHeadset(Eigen::Vector2f(806.0f, 960.0f)));
+    EXPECT_NEAR(screen.SpawnScale(), 1920.0f / 806.0f, 1e-4f);
+}
+
+TEST_F(LaserInteraction, NativeSizedScreenIsNotMinified)
+{
+    g_config->desktop_view_scale = 1.0f;
+    Desktop screen(
+        "screen",
+        Eigen::Vector2i(1920, 1080),
+        FrameTransform::Normal,
+        Eigen::Vector2i(0, 0),
+        nullptr,
+        ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+    );
+    const Eigen::Vector2f density(806.0f, 960.0f);
+    ASSERT_TRUE(screen.FitSpawnToHeadset(density));
+    screen.Reset(false);
+
+    const auto footprint = Container::MeasureFootprint(screen, g_interaction->Hmd(), density);
+    ASSERT_TRUE(footprint.has_value());
+    const float texels_per_pixel = footprint->eye.z() / ((footprint->size.x() / 1920.0f) * density.x());
+    EXPECT_NEAR(texels_per_pixel, 1.0f, 1e-3f);
+}
+
+TEST_F(LaserInteraction, PortraitScreensFitUsingTheirLongSide)
+{
+    g_config->desktop_view_scale = 1.0f;
+    Desktop screen(
+        "portrait",
+        Eigen::Vector2i(1080, 2400),
+        FrameTransform::Normal,
+        Eigen::Vector2i(0, 0),
+        nullptr,
+        ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+    );
+
+    ASSERT_TRUE(screen.FitSpawnToHeadset(Eigen::Vector2f(806.0f, 960.0f)));
+    EXPECT_NEAR(screen.SpawnScale(), 2400.0f / 806.0f, 1e-4f);
+}
+
+TEST_F(LaserInteraction, PortraitScreensArcByTheirWidth)
+{
+    std::vector<std::unique_ptr<Desktop>> screens;
+    for (const int32_t x : {0, 1080})
+    {
+        screens.push_back(
+            std::make_unique<Desktop>(
+                std::format("portrait{}", screens.size()),
+                Eigen::Vector2i(1080, 2400),
+                FrameTransform::Normal,
+                Eigen::Vector2i(x, 0),
+                nullptr,
+                ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+            )
+        );
+        screens.back()->SetSpawnScale(2.0f);
+    }
+    Desktop::ArrangeInFrontOfHead(screens);
+
+    // Width is 2.0 * 1080 / 2400 = 0.9 m, not the 2.0 m height.
+    const float step = 2.0f * std::atan((0.9f + 0.05f) / 2.0f);
+    const float expected = std::sin(step / 2.0f) * std::cos(0.1745f);
+    EXPECT_NEAR(std::abs(screens.front()->SpawnPoint().x()), expected, 1e-4f);
+}
+
+TEST_F(LaserInteraction, ScreensClampToTheLargestVisibleAngle)
+{
+    g_config->desktop_view_scale = 1.0f;
+    Desktop screen(
+        "4k",
+        Eigen::Vector2i(3840, 2160),
+        FrameTransform::Normal,
+        Eigen::Vector2i(0, 0),
+        nullptr,
+        ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+    );
+
+    ASSERT_TRUE(screen.FitSpawnToHeadset(Eigen::Vector2f(806.0f, 960.0f)));
+    const float max_scale = 2.0f * std::tan(std::numbers::pi_v<float> / 3.0f);
+    EXPECT_LT(screen.SpawnScale(), 3840.0f / 806.0f);
+    EXPECT_NEAR(screen.SpawnScale(), max_scale, 1e-4f);
+}
+
+TEST_F(LaserInteraction, ContainerFitsScreensOnceHeadsetDensityIsKnown)
+{
+    g_config->desktop_view_scale = 1.0f;
+    auto screen = std::make_unique<Desktop>(
+        "screen",
+        Eigen::Vector2i(1920, 1080),
+        FrameTransform::Normal,
+        Eigen::Vector2i(0, 0),
+        nullptr,
+        ScreenInteraction(Eigen::Vector2f::Zero(), Eigen::Vector2f::Ones(), FrameTransform::Normal)
+    );
+    auto& state = *screen;
+    m_overlays->Add(std::move(screen));
+
+    g_interaction->SetDisplayPixelsPerRadian(Eigen::Vector2f(806.0f, 960.0f));
+    m_overlays->FitScreensToHeadset();
+    EXPECT_NEAR(state.SpawnScale(), 1920.0f / 806.0f, 1e-4f);
+    EXPECT_LT(state.SpawnPoint().z(), -0.9f);
 }
 
 TEST_F(LaserInteraction, KeyboardSpawnsBelowViewFacingTheHead)

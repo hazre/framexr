@@ -76,6 +76,10 @@ class Container final
     [[nodiscard]] auto Desktops() const -> std::vector<Desktop*>;
     [[nodiscard]] auto Apps() const -> std::vector<Mirror*>;
 
+    // Sizes newly spawned screens so one capture pixel lands on one headset pixel,
+    // using the density the runtime reports once the session is running.
+    auto FitScreensToHeadset() -> void;
+
     auto ById(OverlayId id) -> View*;
     auto ByName(std::string_view name) -> View*;
     auto BySelector(const OverlaySelector& selector) -> View*;
