@@ -44,6 +44,9 @@ endif
 if is_windows
   capture_sources += files(
     'win32/DxgiCapture.cpp',
+    'win32/HwndTracker.cpp',
+    'win32/WgcCapture.cpp',
+    'win32/WgcWindowSource.cpp',
     'win32/WindowSource.cpp',
   )
 endif

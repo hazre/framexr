@@ -135,6 +135,7 @@ if is_windows
     cpp.find_library('ws2_32'),
     cpp.find_library('d3d11'),
     cpp.find_library('dxgi'),
+    cpp.find_library('dwmapi'),
     cpp.find_library('shell32'),
     cpp.find_library('ole32'),
     cpp.find_library('runtimeobject'),

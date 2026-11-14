@@ -18,7 +18,9 @@
 
 #include "WindowSource.hpp"
 
+#include "WgcWindowSource.hpp"
+
 auto WindowSource::Create() -> std::shared_ptr<WindowSource>
 {
-    return nullptr;
+    return std::make_shared<WgcWindowSource>();
 }
