@@ -112,6 +112,7 @@ auto ActionsPanel::Describe(const ButtonAction& action) -> std::string
                 case SystemAction::Recenter: return "Recenter";
                 case SystemAction::ShowHide: return "Show/hide";
                 case SystemAction::Edit: return "Open editor";
+                case SystemAction::PickApp: return "Share app";
                 case SystemAction::ToggleAllowSliding:
                 case SystemAction::ToggleNotificationSounds:
                 case SystemAction::ToggleNotifications:
@@ -568,6 +569,24 @@ auto ActionsPanel::AddChoices() -> void
                 trigger,
                 [](std::vector<ButtonAction>& edited) -> void
                 { edited.emplace_back(SystemButtonAction{.action = SystemAction::Edit}); }
+            );
+        }
+    );
+
+    auto& share_app = fourth.AddComponent<ButtonComponent>("share-app", "Share app");
+    share_app.SetFontSize(PanelStyle::kTextFont);
+    share_app.SetFgColor(text);
+    share_app.SetBgColor(surface);
+    share_app.SetEllipsize(true);
+    share_app.SetOnRelease(
+        [&editor = m_editor, element = m_element, trigger = m_trigger]() -> void
+        {
+            Change(
+                editor,
+                element,
+                trigger,
+                [](std::vector<ButtonAction>& edited) -> void
+                { edited.emplace_back(SystemButtonAction{.action = SystemAction::PickApp}); }
             );
         }
     );

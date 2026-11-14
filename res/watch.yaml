@@ -12,6 +12,12 @@ form:
     height: 40
     position: Below
 
+# shared apps get their own row below the toolbar
+forms:
+  - at: [0, 204]
+    width: 400
+    height: 34
+
 components:
   # background panel
   - type: Panel
@@ -105,6 +111,23 @@ components:
     region: Toolbar
     width: 166
     font_size: 15
+    fg_color: "@text"
+    bg_color: "@panel"
+    layout: Horizontal
+    click_up: ToggleVisible
+    right_up: ToggleImmovable
+    middle_up: ToggleInteraction
+    scroll_up:
+      Opacity: { delta: 0.025 }
+    scroll_down:
+      Opacity: { delta: -0.025 }
+
+  # row of shared apps, ends with a button to share another
+  - type: OverlayList
+    form: 1
+    rect: [0, 0, 400, 34]
+    source: Apps
+    font_size: 14
     fg_color: "@text"
     bg_color: "@panel"
     layout: Horizontal

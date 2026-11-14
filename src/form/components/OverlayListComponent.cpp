@@ -19,17 +19,28 @@
 #include "OverlayListComponent.hpp"
 
 #include <algorithm>
+#include <array>
+#include <iterator>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "ButtonComponent.hpp"
 #include "Container.hpp"
 #include "Desktop.hpp"
+#include "Mirror.hpp"
 #include "document/FormParser.hpp"
 
 namespace
 {
 
 constexpr float kInset = 2.0f;
+constexpr std::string_view kAddApp = "+ App";
+
+constexpr auto kSourceNames = std::to_array<std::pair<OverlaySource, std::string_view>>({
+    {OverlaySource::Screens, "Screens"},
+    {OverlaySource::Apps, "Apps"},
+});
 
 auto ScreenActions(const std::optional<OverlayAction>& action, OverlayId id) -> std::optional<std::vector<ButtonAction>>
 {
@@ -60,6 +71,7 @@ auto OverlayListComponent::Parse(const nlohmann::json& json) -> OverlayListEleme
         .fg_color = json.at("fg_color").get<std::string>(),
         .bg_color = json.at("bg_color").get<std::string>(),
         .layout = FormParser::Layout(json),
+        .source = ParseSource(json),
         .overlay_template = {
             .click_down = action("click_down"),
             .click_up = action("click_up"),
@@ -83,6 +95,7 @@ auto OverlayListComponent::Serialize(nlohmann::ordered_json& json, const Overlay
     json["fg_color"] = element.fg_color;
     json["bg_color"] = element.bg_color;
     FormParser::PutLayout(json, element.layout);
+    PutSource(json, element.source);
     const auto& actions = element.overlay_template;
     Put(json, "click_down", actions.click_down);
     Put(json, "click_up", actions.click_up);
@@ -102,7 +115,9 @@ auto OverlayListComponent::Create(FormComponent& parent, const OverlayListElemen
 {
     auto& list = parent.AddComponent<OverlayListComponent>();
     list.SetRect(FormParser::ToRect(element.rect));
-    const auto count = static_cast<float>(std::max<size_t>(g_container->Desktops().size(), 1));
+    const auto overlays = Overlays(element.source);
+    const bool add_app = element.source == OverlaySource::Apps;
+    const auto count = static_cast<float>(std::max<size_t>(overlays.size() + (add_app ? 1 : 0), 1));
     const float cell_w = element.layout == ListLayout::Horizontal ? element.rect[2] / count : element.rect[2];
     const float cell_h = element.layout == ListLayout::Horizontal ? element.rect[3] : element.rect[3] / count;
     const auto bg_color = FormParser::Color(element.bg_color, context.theme);
@@ -110,27 +125,15 @@ auto OverlayListComponent::Create(FormComponent& parent, const OverlayListElemen
     const auto& actions = element.overlay_template;
     float x = 0.0f;
     float y = 0.0f;
-    for (const auto* screen : g_container->Desktops())
+    const auto place = [&](const std::string& text, const ButtonData& data) -> void
     {
-        const ButtonData data{
-            .click_down = ScreenActions(actions.click_down, screen->Id()),
-            .click_up = ScreenActions(actions.click_up, screen->Id()),
-            .long_click_up = ScreenActions(actions.long_click_up, screen->Id()),
-            .right_down = ScreenActions(actions.right_down, screen->Id()),
-            .right_up = ScreenActions(actions.right_up, screen->Id()),
-            .long_right_up = ScreenActions(actions.long_right_up, screen->Id()),
-            .middle_down = ScreenActions(actions.middle_down, screen->Id()),
-            .middle_up = ScreenActions(actions.middle_up, screen->Id()),
-            .long_middle_up = ScreenActions(actions.long_middle_up, screen->Id()),
-            .scroll_down = ScreenActions(actions.scroll_down, screen->Id()),
-            .scroll_up = ScreenActions(actions.scroll_up, screen->Id()),
-        };
-        auto& button = list.AddComponent<ButtonComponent>("", screen->Name());
+        auto& button = list.AddComponent<ButtonComponent>("", text);
         button.SetRect({x + kInset, y + kInset, cell_w - 2.0f * kInset, cell_h - 2.0f * kInset});
         button.SetCornerRadius(element.corner_radius);
         button.SetFontSize(element.font_size);
         button.SetFgColor(fg_color);
         button.SetBgColor(bg_color);
+        button.SetEllipsize(true);
         if (context.bind)
         {
             context.bind(button, data);
@@ -143,8 +146,59 @@ auto OverlayListComponent::Create(FormComponent& parent, const OverlayListElemen
         {
             y += cell_h;
         }
+    };
+    for (const auto* overlay : overlays)
+    {
+        place(
+            overlay->Name(),
+            {
+                .click_down = ScreenActions(actions.click_down, overlay->Id()),
+                .click_up = ScreenActions(actions.click_up, overlay->Id()),
+                .long_click_up = ScreenActions(actions.long_click_up, overlay->Id()),
+                .right_down = ScreenActions(actions.right_down, overlay->Id()),
+                .right_up = ScreenActions(actions.right_up, overlay->Id()),
+                .long_right_up = ScreenActions(actions.long_right_up, overlay->Id()),
+                .middle_down = ScreenActions(actions.middle_down, overlay->Id()),
+                .middle_up = ScreenActions(actions.middle_up, overlay->Id()),
+                .long_middle_up = ScreenActions(actions.long_middle_up, overlay->Id()),
+                .scroll_down = ScreenActions(actions.scroll_down, overlay->Id()),
+                .scroll_up = ScreenActions(actions.scroll_up, overlay->Id()),
+            }
+        );
+    }
+    if (add_app)
+    {
+        place(std::string(kAddApp), {.click_up = std::vector<ButtonAction>{SystemButtonAction{.action = SystemAction::PickApp}}});
     }
     return list;
+}
+
+auto OverlayListComponent::ParseSource(const nlohmann::json& json) -> OverlaySource
+{
+    const auto it = json.find("source");
+    return it == json.end() || it->is_null() ? OverlaySource::Screens : FormParser::ParseName(*it, kSourceNames, "OverlaySource");
+}
+
+auto OverlayListComponent::PutSource(nlohmann::ordered_json& json, OverlaySource source) -> void
+{
+    if (source != OverlaySource::Screens)
+    {
+        json["source"] = FormParser::NameOf(source, kSourceNames);
+    }
+}
+
+auto OverlayListComponent::Overlays(OverlaySource source) -> std::vector<const View*>
+{
+    std::vector<const View*> overlays;
+    if (source == OverlaySource::Apps)
+    {
+        std::ranges::copy(g_container->Apps(), std::back_inserter(overlays));
+    }
+    else
+    {
+        std::ranges::copy(g_container->Desktops(), std::back_inserter(overlays));
+    }
+    return overlays;
 }
 
 OverlayListComponent::OverlayListComponent(std::string name) : FormComponent(std::move(name))

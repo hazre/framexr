@@ -39,9 +39,11 @@
 #include "Keymap.hpp"
 #include "Logger.hpp"
 #include "Desktop.hpp"
+#include "Mirror.hpp"
 #include "ScreenInteraction.hpp"
 #include "ScreenRenderer.hpp"
 #include "Watch.hpp"
+#include "WindowToolbar.hpp"
 #include "framexr_config.h"
 
 #if FRAMEXR_FEATURE_WAYLAND
@@ -129,6 +131,9 @@ auto Container::Create() -> Result<std::unique_ptr<Container>>
     watch->SetWantVisible(true);
     container->Add(std::move(watch));
 
+    ASSIGN_OR_RETURN(auto toolbar, WindowToolbar::Create());
+    container->Add(std::move(toolbar));
+
     if (keymap)
     {
         g_interaction->SetTypingKeymap(std::make_shared<const Keymap>(std::move(*keymap)));
@@ -139,6 +144,32 @@ auto Container::Create() -> Result<std::unique_ptr<Container>>
     container->Add(std::move(keyboard));
 
     return container;
+}
+
+auto Container::Apps() const -> std::vector<Mirror*>
+{
+    std::vector<Mirror*> apps;
+    for (const auto& view : m_views)
+    {
+        if (auto* app = dynamic_cast<Mirror*>(view.get()))
+        {
+            apps.push_back(app);
+        }
+    }
+    return apps;
+}
+
+auto Container::RebuildWatch() -> void
+{
+    auto* watch = dynamic_cast<Watch*>(ByName(kWatchName));
+    if (watch == nullptr)
+    {
+        return;
+    }
+    if (const auto result = watch->Rebuild(); !result)
+    {
+        LOG_ERROR("Failed to create watch canvas: {}", result.error().Message());
+    }
 }
 
 auto Container::Desktops() const -> std::vector<Desktop*>
@@ -183,6 +214,7 @@ auto Container::BySelector(const OverlaySelector& selector) -> View*
 auto Container::Add(std::unique_ptr<View> overlay) -> void
 {
     const auto id = overlay->Id();
+    const bool app = dynamic_cast<const Mirror*>(overlay.get()) != nullptr;
     const auto position = std::ranges::lower_bound(m_views, id, {}, [](const auto& item) -> OverlayId { return item->Id(); });
     if (position != m_views.end() && (*position)->Id() == id)
     {
@@ -192,12 +224,20 @@ auto Container::Add(std::unique_ptr<View> overlay) -> void
     {
         m_views.insert(position, std::move(overlay));
     }
+    if (app)
+    {
+        RebuildWatch();
+    }
 }
 
 auto Container::RemoveAt(size_t index) -> std::unique_ptr<View>
 {
     auto removed = std::move(m_views[index]);
     m_views.erase(m_views.begin() + static_cast<std::ptrdiff_t>(index));
+    if (dynamic_cast<const Mirror*>(removed.get()) != nullptr)
+    {
+        RebuildWatch();
+    }
     return removed;
 }
 
@@ -322,15 +362,7 @@ auto Container::Update() -> Result<std::vector<std::unique_ptr<View>>>
 
     if (watch_dirty)
     {
-        auto* watch = ByName(kWatchName);
-        if (watch == nullptr)
-        {
-            FatalError("Watch overlay missing");
-        }
-        if (const auto result = dynamic_cast<Watch&>(*watch).Rebuild(); !result)
-        {
-            LOG_ERROR("Failed to create watch canvas: {}", result.error().Message());
-        }
+        RebuildWatch();
     }
 #endif
     return removed;

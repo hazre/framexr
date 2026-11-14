@@ -44,7 +44,7 @@ enum class PipewireCommand : uint8_t
 class PipewireCapture final : public Capture
 {
   public:
-    PipewireCapture(std::string name, uint32_t node_id);
+    PipewireCapture(std::string name, uint32_t node_id, std::unique_ptr<WindowTracker> tracker = nullptr);
     ~PipewireCapture() override;
 
     auto Start(std::span<const DrmFormat> dmabuf_formats, FrameProcessor processor) -> void override;
@@ -54,6 +54,7 @@ class PipewireCapture final : public Capture
     auto Pause() -> void override;
     auto Resume() -> void override;
     auto RequestNewFrame() -> void override {}
+    auto Window() -> WindowTracker* override { return m_tracker.get(); }
 
     PipewireCapture(const PipewireCapture&) = delete;
     auto operator=(const PipewireCapture&) -> PipewireCapture& = delete;
@@ -75,6 +76,7 @@ class PipewireCapture final : public Capture
 
     std::string m_name;
     uint32_t m_node_id;
+    std::unique_ptr<WindowTracker> m_tracker;
     std::vector<DrmFormat> m_dmabuf_formats;
     FrameProcessor m_processor;
     std::shared_ptr<FrameChannel<std::unique_ptr<ProcessedFrame>>> m_channel;

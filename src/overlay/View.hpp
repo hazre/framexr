@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -90,6 +91,7 @@ class View
     [[nodiscard]] auto InteractionTransform() -> Eigen::Affine2f& { return m_interaction_transform; }
     [[nodiscard]] auto ExtentHint() const -> VkExtent2D { return m_extent_hint; }
     [[nodiscard]] auto BirthFrame() const -> size_t { return m_birth_frame; }
+    [[nodiscard]] auto HoveredAt() const -> std::chrono::steady_clock::time_point { return m_hovered_at; }
 
     auto SetName(std::string name) -> void { m_name = std::move(name); }
     auto SetWantVisible(bool want_visible) -> void { m_want_visible = want_visible; }
@@ -116,6 +118,7 @@ class View
     }
     auto SetExtentHint(VkExtent2D extent_hint) -> void { m_extent_hint = extent_hint; }
     auto SetBirthFrame(size_t birth_frame) -> void { m_birth_frame = birth_frame; }
+    auto SetHoveredAt(std::chrono::steady_clock::time_point hovered_at) -> void { m_hovered_at = hovered_at; }
 
     [[nodiscard]] auto ParentTransform() const -> std::optional<Eigen::Affine3f>;
     [[nodiscard]] auto LocalTransform() const -> Eigen::Affine3f;
@@ -160,4 +163,5 @@ class View
     Eigen::Affine2f m_interaction_transform = Eigen::Affine2f::Identity();
     VkExtent2D m_extent_hint{};
     size_t m_birth_frame = 0;
+    std::chrono::steady_clock::time_point m_hovered_at;
 };

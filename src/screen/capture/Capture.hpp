@@ -27,6 +27,7 @@
 
 #include "Frame.hpp"
 #include "ProcessedFrame.hpp"
+#include "WindowTracker.hpp"
 
 using FrameProcessor = std::function<std::unique_ptr<ProcessedFrame>(Frame&&)>;
 
@@ -42,4 +43,5 @@ class Capture
     virtual auto Pause() -> void = 0;
     virtual auto Resume() -> void = 0;
     virtual auto RequestNewFrame() -> void = 0;
+    virtual auto Window() -> WindowTracker* { return nullptr; }
 };

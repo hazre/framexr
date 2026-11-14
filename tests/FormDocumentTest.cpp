@@ -184,11 +184,13 @@ auto ToolbarRects(const FormDocument& config) -> std::vector<std::array<float, 4
 
 } // namespace
 
-TEST(FormDocument, WatchHasAFormAndAToolbarBelowIt)
+TEST(FormDocument, WatchHasAFormAToolbarAndAnAppRowBelowIt)
 {
     const auto watch = ConfigStore::LoadKnownYaml<FormDocument>("watch.yaml", kWatchYaml);
     ASSERT_TRUE(watch.Form().toolbar.has_value());
-    EXPECT_EQ(watch.Size(), (std::array<uint32_t, 2>{400, 200}));
+    EXPECT_EQ(watch.Size(), (std::array<uint32_t, 2>{400, 238}));
+    ASSERT_EQ(watch.Forms().size(), 1U);
+    EXPECT_FLOAT_EQ(watch.FormRect(1).y, 204.0f);
 
     const auto rects = ToolbarRects(watch);
     ASSERT_GE(rects.size(), 5U);

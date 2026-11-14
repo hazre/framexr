@@ -77,11 +77,11 @@ enum class SystemAction : uint8_t
     PersistConfig,
     PersistLayout,
     Edit,
+    PickApp,
 };
 
 enum class WindowAction : uint8_t
 {
-    ShowMirror,
     ShowUi,
     Destroy,
 };

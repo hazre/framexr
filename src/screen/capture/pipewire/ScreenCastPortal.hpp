@@ -24,12 +24,14 @@
 #include <cstdint>
 #include <functional>
 #include <future>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <Eigen/Core>
 
+#include "Capture.hpp"
 #include "Error.hpp"
 
 struct DBusConnection;
@@ -71,6 +73,7 @@ class ScreenCastPortal final
 {
   public:
     static auto SelectScreen(ScreenCastOptions options) -> std::future<Result<ScreenSelection>>;
+    static auto SelectWindow(std::string name) -> std::future<Result<std::unique_ptr<Capture>>>;
 
   private:
     explicit ScreenCastPortal(DBusConnection* connection);

@@ -22,27 +22,30 @@
 #include "Mirror.hpp"
 
 #include <chrono>
+#include <utility>
 
-#include "Config.hpp"
 #include "Compose.hpp"
+#include "Config.hpp"
 #include "Logger.hpp"
-#include "PipewireCapture.hpp"
 #include "ScreenRenderer.hpp"
 #include "TaskQueue.hpp"
 
-Mirror::Mirror(std::string name, bool show_hide) : m_selection(ScreenCastPortal::SelectScreen({}))
+Mirror::Mirror(std::string name, std::future<Result<std::unique_ptr<Capture>>> capture) : m_capture(std::move(capture))
 {
     SetName(std::move(name));
-    SetShowHide(show_hide);
     SetWantVisible(true);
+    SetRecenter(true);
+    SetShowHide(true);
     SetSpawnScale(0.5f * g_config->desktop_view_scale);
 }
 
 auto Mirror::Update() -> void
 {
-    if (m_selection && m_selection->wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+    if (m_capture && m_capture->wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
-        Attach();
+        auto capture = m_capture->get();
+        m_capture.reset();
+        Attach(std::move(capture));
     }
     if (const auto meta = Composer()->Meta();
         meta && (meta->extent.width != m_extent.width || meta->extent.height != m_extent.height))
@@ -52,25 +55,73 @@ auto Mirror::Update() -> void
     }
 }
 
-auto Mirror::Attach() -> void
+auto Mirror::Switch(std::future<Result<std::unique_ptr<Capture>>> capture) -> void
 {
-    auto selection = m_selection->get();
-    m_selection.reset();
-    if (!selection || selection->streams.empty())
+    m_capture = std::move(capture);
+}
+
+auto Mirror::Attach(Result<std::unique_ptr<Capture>> capture) -> void
+{
+    if (!capture)
     {
-        LOG_WARN(
-            "Failed to create mirror due to PipeWire error: {}",
-            selection ? std::string("no streams selected") : selection.error().Message()
-        );
-        g_tasks->Enqueue(DropOverlayTask{.selector = Name()});
+        LOG_WARN("Failed to create mirror: {}", capture.error().Message());
+        if (!m_attached)
+        {
+            g_tasks->Enqueue(DropOverlayTask{.selector = Name()});
+        }
         return;
     }
-    const uint32_t node_id = selection->streams.front().node_id;
-    LOG_INFO("{}: PipeWire node selected: {}", Name(), node_id);
-    SetComposer(
-        std::make_unique<Compose>(std::make_unique<ScreenRenderer>(Name(), std::make_unique<PipewireCapture>(Name(), node_id)))
-    );
-    SetGrabbable(true);
-    SetInteractable(true);
-    Reset(false);
+    m_window = (*capture)->Window();
+    m_input.reset();
+    SetComposer(std::make_unique<Compose>(std::make_unique<ScreenRenderer>(Name(), std::move(*capture))));
+    if (!std::exchange(m_attached, true))
+    {
+        SetGrabbable(true);
+        SetInteractable(true);
+        Reset(false);
+    }
+}
+
+auto Mirror::OnHover(const PointerHit& hit) -> std::optional<Haptics>
+{
+    if (auto* input = Input())
+    {
+        input->Hover(hit);
+    }
+    return std::nullopt;
+}
+
+auto Mirror::OnPointer(const PointerHit& hit, bool pressed) -> void
+{
+    if (auto* input = Input())
+    {
+        if (pressed)
+        {
+            m_window->Activate();
+        }
+        input->Press(hit, pressed);
+    }
+}
+
+auto Mirror::OnScroll(const PointerHit&, float delta_y, float delta_x) -> void
+{
+    if (Input() != nullptr)
+    {
+        ScreenInteraction::Scroll(delta_y, delta_x);
+    }
+}
+
+auto Mirror::Input() -> ScreenInteraction*
+{
+    const auto bounds = m_window != nullptr ? m_window->Bounds() : std::nullopt;
+    if (!bounds)
+    {
+        return nullptr;
+    }
+    if (!m_input || !bounds->isApprox(m_bounds))
+    {
+        m_bounds = *bounds;
+        m_input.emplace(m_bounds.min(), m_bounds.sizes(), FrameTransform::Normal);
+    }
+    return &*m_input;
 }

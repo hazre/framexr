@@ -28,6 +28,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <Eigen/Core>
@@ -78,7 +79,7 @@ class Desktop final : public View
     [[nodiscard]] auto DesktopPosition() const -> const Eigen::Vector2i& { return m_position; }
 
     auto SetOutput(uint32_t output) -> void { m_output = output; }
-    auto SetInput(ScreenInteraction input) -> void { m_input = input; }
+    auto SetInput(ScreenInteraction input) -> void { m_input = std::move(input); }
 
     auto OnHover(const PointerHit& hit) -> std::optional<Haptics> override;
     auto OnPointer(const PointerHit& hit, bool pressed) -> void override;

@@ -23,11 +23,14 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "FormComponent.hpp"
 #include "document/Common.hpp"
+
+class View;
 
 struct OverlayListTemplate
 {
@@ -52,6 +55,7 @@ struct OverlayListElement
     std::string fg_color;
     std::string bg_color;
     ListLayout layout = ListLayout::Horizontal;
+    OverlaySource source = OverlaySource::Screens;
     OverlayListTemplate overlay_template;
     Region region = Region::Form;
     size_t form = 0;
@@ -68,4 +72,9 @@ class OverlayListComponent final : public FormComponent
         -> OverlayListComponent&;
 
     explicit OverlayListComponent(std::string name = {});
+
+  private:
+    static auto ParseSource(const nlohmann::json& json) -> OverlaySource;
+    static auto PutSource(nlohmann::ordered_json& json, OverlaySource source) -> void;
+    static auto Overlays(OverlaySource source) -> std::vector<const View*>;
 };

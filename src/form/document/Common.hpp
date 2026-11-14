@@ -37,6 +37,12 @@ enum class ListLayout : uint8_t
     Vertical,
 };
 
+enum class OverlaySource : uint8_t
+{
+    Screens,
+    Apps,
+};
+
 enum class BatteryStyle : uint8_t
 {
     Text,

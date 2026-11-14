@@ -112,12 +112,10 @@ screen_sources = files(
   'screen/PendingFrame.cpp',
   'screen/ScreenInteraction.cpp',
   'screen/ScreenPipeline.cpp',
+  'screen/Mirror.cpp',
   'screen/ScreenRenderer.cpp',
 )
 
-if get_option('wayland').allowed()
-  screen_sources += files('screen/Mirror.cpp')
-endif
 
 overlay_sources = files(
   'overlay/ActionBinding.cpp',
@@ -129,7 +127,9 @@ overlay_sources = files(
   'overlay/views/Desktop.cpp',
   'overlay/views/EditorPanel.cpp',
   'overlay/views/Keyboard.cpp',
+  'overlay/views/AppPicker.cpp',
   'overlay/views/KeyboardPicker.cpp',
+  'overlay/views/WindowToolbar.cpp',
   'overlay/views/Settings.cpp',
   'overlay/views/Toast.cpp',
   'overlay/views/Watch.cpp',

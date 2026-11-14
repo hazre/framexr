@@ -245,138 +245,22 @@ components:
     rect: [50, 220, 500, 1]
     bg_color: "@outline"
 
-  ####### Mirror Section #######
+  ####### Apps Section #######
   - type: Label
     rect: [15, 255, 570, 24]
     font_size: 18
     fg_color: "@text"
-    text: Mirrors
-
-  - type: Label
-    rect: [25, 290, 30, 30]
-    font_size: 12
-    fg_color: "@text"
-    text: M1
+    text: Apps
 
   - type: Button
-    rect: [60, 270, 110, 30]
+    rect: [25, 270, 200, 30]
     font_size: 12
     fg_color: "@text"
     bg_color: "#494d64"
-    text: "Show/Hide"
-    click_down: # ToggleVisible if exists, else create
-      - type: Overlay
-        target: M1
-        action: ToggleVisible # only fires if overlay exists
-      - type: Window
-        target: M1
-        action: ShowMirror # only fires if not exists
-
-  - type: Button
-    rect: [185, 270, 60, 30]
-    font_size: 12
-    fg_color: "@text"
-    bg_color: "#494d64"
-    text: "Lock"
+    text: "Share an app"
     click_down:
-      - type: Overlay
-        target: M1
-        action: ToggleInteraction
-
-  - type: Button
-    rect: [258, 270, 30, 30]
-    font_size: 12
-    fg_color: "@on-accent"
-    bg_color: "@red"
-    text: "X"
-    click_down:
-      - type: Window
-        target: M1
-        action: Destroy
-
-  - type: Label
-    rect: [25, 340, 30, 30]
-    font_size: 12
-    fg_color: "@text"
-    text: M2
-
-  - type: Button
-    rect: [60, 320, 110, 30]
-    font_size: 12
-    fg_color: "@text"
-    bg_color: "#494d64"
-    text: "Show/Hide"
-    click_down:
-      - type: Overlay
-        target: M2
-        action: ToggleVisible
-      - type: Window
-        target: M2
-        action: ShowMirror
-
-  - type: Button
-    rect: [185, 320, 60, 30]
-    font_size: 12
-    fg_color: "@text"
-    bg_color: "#494d64"
-    text: "Lock"
-    click_down:
-      - type: Overlay
-        target: M2
-        action: ToggleInteraction
-
-  - type: Button
-    rect: [258, 320, 30, 30]
-    font_size: 12
-    fg_color: "@on-accent"
-    bg_color: "@red"
-    text: "X"
-    click_down:
-      - type: Window
-        target: M2
-        action: Destroy
-
-  - type: Label
-    rect: [25, 390, 30, 30]
-    font_size: 12
-    fg_color: "@text"
-    text: M3
-
-  - type: Button
-    rect: [60, 370, 110, 30]
-    font_size: 12
-    fg_color: "@text"
-    bg_color: "#494d64"
-    text: "Show/Hide"
-    click_down:
-      - type: Overlay
-        target: M3
-        action: ToggleVisible
-      - type: Window
-        target: M3
-        action: ShowMirror
-
-  - type: Button
-    rect: [185, 370, 60, 30]
-    font_size: 12
-    fg_color: "@text"
-    bg_color: "#494d64"
-    text: "Lock"
-    click_down:
-      - type: Overlay
-        target: M3
-        action: ToggleInteraction
-
-  - type: Button
-    rect: [258, 370, 30, 30]
-    font_size: 12
-    fg_color: "@on-accent"
-    bg_color: "@red"
-    text: "X"
-    click_down:
-      - type: Window
-        target: M3
-        action: Destroy
+      - type: System
+        action: PickApp
 
   - type: Panel
     rect: [300, 240, 1, 200]

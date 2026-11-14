@@ -36,6 +36,7 @@
 #include "HidProvider.hpp"
 #include "Json.hpp"
 #include "Keyboard.hpp"
+#include "AppPicker.hpp"
 #include "KeyboardPicker.hpp"
 #include "KeyboardLayout.hpp"
 #include "Keymap.hpp"
@@ -46,10 +47,6 @@
 #include "Toast.hpp"
 #include "Watch.hpp"
 #include "framexr_config.h"
-
-#if FRAMEXR_FEATURE_WAYLAND
-#include "Mirror.hpp"
-#endif
 
 namespace
 {
@@ -322,6 +319,7 @@ auto ActionRunner::RunSystem(SystemAction action) -> void
         }
         break;
     case SystemAction::Edit: g_tasks->Enqueue(SystemTask{OpenEditorTask{}}); break;
+    case SystemAction::PickApp: AppPicker::Open(std::nullopt); break;
     }
 }
 
@@ -566,22 +564,6 @@ auto ActionRunner::RunWindow(const std::string& target, WindowAction action) -> 
 {
     switch (action)
     {
-    case WindowAction::ShowMirror:
-#if FRAMEXR_FEATURE_WAYLAND
-        g_tasks->Enqueue(
-            CreateOverlayTask{
-                .selector = target,
-                .create = [target]() -> std::unique_ptr<View>
-                {
-                    Toast::Show(ToastMessage{.topic = ToastTopic::System, .title = "Check your desktop for popup.", .sound = true});
-                    return std::make_unique<Mirror>(target, false);
-                },
-            }
-        );
-#else
-        LOG_WARN("Mirror not available without Wayland feature.");
-#endif
-        break;
     case WindowAction::ShowUi:
         g_tasks->Enqueue(
             CreateOverlayTask{

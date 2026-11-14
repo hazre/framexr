@@ -14,7 +14,12 @@ if get_option('wayland').allowed()
   capture_sources += files(
     'pipewire/PipewireCapture.cpp',
     'pipewire/ScreenCastPortal.cpp',
+    'wayland/DesktopEntry.cpp',
+    'wayland/KwinWindowSource.cpp',
+    'wayland/KwinWindowTracker.cpp',
     'wayland/WaylandClient.cpp',
+    'wayland/WaylandConnection.cpp',
+    'wayland/WindowSource.cpp',
     'wayland/WlrDmabufCapture.cpp',
     'wayland/WlrScreencopyCapture.cpp',
   )
@@ -23,6 +28,9 @@ endif
 
 if get_option('x11').allowed()
   capture_sources += files('x11/Xshm.cpp', 'x11/XshmCapture.cpp')
+  if not get_option('wayland').allowed()
+    capture_sources += files('x11/WindowSource.cpp')
+  endif
   capture_deps += [
     dependency('x11', include_type: 'system'),
     dependency('xext', include_type: 'system'),
@@ -31,5 +39,8 @@ if get_option('x11').allowed()
 endif
 
 if is_windows
-  capture_sources += files('win32/DxgiCapture.cpp')
+  capture_sources += files(
+    'win32/DxgiCapture.cpp',
+    'win32/WindowSource.cpp',
+  )
 endif

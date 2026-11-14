@@ -232,7 +232,10 @@ auto BuildMetaParam(std::vector<std::byte>& storage, uint32_t type, size_t size)
 
 } // namespace
 
-PipewireCapture::PipewireCapture(std::string name, uint32_t node_id) : m_name(std::move(name)), m_node_id(node_id)
+PipewireCapture::PipewireCapture(std::string name, uint32_t node_id, std::unique_ptr<WindowTracker> tracker)
+    : m_name(std::move(name)),
+      m_node_id(node_id),
+      m_tracker(std::move(tracker))
 {
 }
 

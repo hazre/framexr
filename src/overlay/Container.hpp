@@ -38,6 +38,7 @@ class Editor;
 class Keymap;
 class WaylandClient;
 class Desktop;
+class Mirror;
 
 struct ViewRect
 {
@@ -73,6 +74,7 @@ class Container final
     [[nodiscard]] auto Views() -> std::vector<std::unique_ptr<View>>& { return m_views; }
     [[nodiscard]] auto Views() const -> const std::vector<std::unique_ptr<View>>& { return m_views; }
     [[nodiscard]] auto Desktops() const -> std::vector<Desktop*>;
+    [[nodiscard]] auto Apps() const -> std::vector<Mirror*>;
 
     auto ById(OverlayId id) -> View*;
     auto ByName(std::string_view name) -> View*;
@@ -101,6 +103,7 @@ class Container final
     auto ArrangeVisible() -> void;
 
     auto RemoveAt(size_t index) -> std::unique_ptr<View>;
+    auto RebuildWatch() -> void;
     auto CreateDesktops(std::optional<Keymap>& keymap) -> Result<std::vector<std::unique_ptr<Desktop>>>;
     static auto RotateAroundHead(View& view, const Eigen::Affine3f& head, const Eigen::Vector3f& axis, float angle) -> void;
 

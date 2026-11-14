@@ -22,6 +22,7 @@
 #include "methods/LaserPointer.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 
@@ -367,6 +368,7 @@ auto LaserPointer::Interact() -> InteractionResult
     }
 
     LOG_TRACE("Hit: {} uv=({}, {}) dist={}", hovered->Name(), hit->uv.x(), hit->uv.y(), hit->dist);
+    hovered->SetHoveredAt(std::chrono::steady_clock::now());
 
     if (m_now.grab && !m_before.grab && hovered->Grabbable())
     {

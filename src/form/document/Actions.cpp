@@ -46,6 +46,7 @@ constexpr auto kSystemActions = std::to_array<std::pair<SystemAction, std::strin
     {SystemAction::PersistConfig, "PersistConfig"},
     {SystemAction::PersistLayout, "PersistLayout"},
     {SystemAction::Edit, "Edit"},
+    {SystemAction::PickApp, "PickApp"},
 });
 
 constexpr auto kHighlightTests = std::to_array<std::pair<HighlightTest, std::string_view>>({
@@ -56,7 +57,6 @@ constexpr auto kHighlightTests = std::to_array<std::pair<HighlightTest, std::str
 });
 
 constexpr auto kWindowActions = std::to_array<std::pair<WindowAction, std::string_view>>({
-    {WindowAction::ShowMirror, "ShowMirror"},
     {WindowAction::ShowUi, "ShowUi"},
     {WindowAction::Destroy, "Destroy"},
 });
