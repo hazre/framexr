@@ -24,7 +24,7 @@
 namespace
 {
 
-constexpr float kDimmedLegend = 0.4f;
+constexpr float kDimmedLegend = 0.55f;
 
 } // namespace
 
@@ -142,9 +142,11 @@ auto KeyComponent::Emphasize(const KeyEmphasis& emphasis) -> void
         active = 1;
     }
     active = active < m_legends.size() ? active : 0;
+    Eigen::Vector4f dimmed = m_fg_color;
+    dimmed.w() *= kDimmedLegend;
     for (size_t i = 0; i < m_legends.size(); ++i)
     {
-        m_legends[i]->SetFgColor(m_fg_color * (i == active || m_legends.size() == 1 ? 1.0f : kDimmedLegend));
+        m_legends[i]->SetFgColor(i == active || m_legends.size() == 1 ? m_fg_color : dimmed);
     }
     MarkDirty();
 }
