@@ -24,8 +24,10 @@
 #include <cmath>
 #include <format>
 #include <limits>
+#include <utility>
 
 #include "Device.hpp"
+#include "Interaction.hpp"
 #include "Logger.hpp"
 #include "OpenVrMath.hpp"
 
@@ -232,12 +234,42 @@ auto OpenVrOverlay::UploadTransform(vr::ETrackingUniverseOrigin universe, View& 
     }
     const auto meta = overlay.Composer()->Meta();
     const Eigen::Affine3f effective = overlay.Transform() * (meta ? meta->transform : Eigen::Affine3f::Identity());
-    const auto matrix = OpenVrMath::ToHmdMatrix(effective);
-    if (const auto error = vr::VROverlay()->SetOverlayTransformAbsolute(data.handle, universe, &matrix);
-        error != vr::VROverlayError_None)
+    const auto [device, pose] = TrackedParent(overlay.AttachedTo());
+    vr::EVROverlayError error = vr::VROverlayError_None;
+    if (device != vr::k_unTrackedDeviceIndexInvalid)
+    {
+        const auto matrix = OpenVrMath::ToHmdMatrix(Eigen::Affine3f(pose.matrix().inverse() * effective.matrix()));
+        error = vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(data.handle, device, &matrix);
+    }
+    else
+    {
+        const auto matrix = OpenVrMath::ToHmdMatrix(effective);
+        error = vr::VROverlay()->SetOverlayTransformAbsolute(data.handle, universe, &matrix);
+    }
+    if (error != vr::VROverlayError_None)
     {
         LOG_ERROR("{}: Failed to set overlay transform: {}", overlay.Name(), ErrorName(error));
     }
+}
+
+auto OpenVrOverlay::TrackedParent(RelativeTo attached_to) -> std::pair<vr::TrackedDeviceIndex_t, Eigen::Affine3f>
+{
+    const auto hand = [](vr::ETrackedControllerRole role, size_t pointer) -> std::pair<vr::TrackedDeviceIndex_t, Eigen::Affine3f>
+    {
+        return {
+            vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(role),
+            g_interaction->Pointers()[pointer].RawPose(),
+        };
+    };
+    switch (attached_to)
+    {
+    case RelativeTo::Head: return {vr::k_unTrackedDeviceIndex_Hmd, g_interaction->Hmd()};
+    case RelativeTo::LeftHand: return hand(vr::TrackedControllerRole_LeftHand, 0);
+    case RelativeTo::RightHand: return hand(vr::TrackedControllerRole_RightHand, 1);
+    case RelativeTo::None:
+    case RelativeTo::Stage: break;
+    }
+    return {vr::k_unTrackedDeviceIndexInvalid, Eigen::Affine3f::Identity()};
 }
 
 auto OpenVrOverlay::UploadTexture(View& overlay, OpenVrOverlayData& data) -> void

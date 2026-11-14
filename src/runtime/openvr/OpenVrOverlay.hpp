@@ -22,8 +22,10 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 #include <openvr.h>
 
 #include "Device.hpp"
@@ -63,4 +65,5 @@ class OpenVrOverlay
     static auto UploadWidth(const View& overlay, const OpenVrOverlayData& data) -> void;
     static auto UploadCurvature(const View& overlay, const OpenVrOverlayData& data) -> void;
     static auto UploadSortOrder(const View& overlay, const OpenVrOverlayData& data) -> void;
+    static auto TrackedParent(RelativeTo attached_to) -> std::pair<vr::TrackedDeviceIndex_t, Eigen::Affine3f>;
 };
