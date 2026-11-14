@@ -171,15 +171,20 @@ auto ScreenRenderer::ShouldRender() -> Result<RenderReadiness>
         }
     }
 
-    if (m_current && !m_meta)
+    if (m_current)
     {
-        m_meta = FrameMeta{
+        const FrameMeta meta{
             .extent = ExtentFromFormat(m_current->Format()),
             .transform = AffineFromFormat(m_current->Format()),
             .format = m_current->Texture()->Format(),
         };
-        ASSIGN_OR_RETURN(auto pipeline, ScreenPipeline::Create(m_current->Texture()->Extent()));
-        m_pipeline.emplace(std::move(pipeline));
+        if (!m_meta || meta.extent.width != m_meta->extent.width || meta.extent.height != m_meta->extent.height
+            || meta.format != m_meta->format || !meta.transform.isApprox(m_meta->transform))
+        {
+            ASSIGN_OR_RETURN(auto pipeline, ScreenPipeline::Create(m_current->Texture()->Extent()));
+            m_pipeline.emplace(std::move(pipeline));
+            m_meta = meta;
+        }
     }
 
     return m_current ? RenderReadiness::Should : RenderReadiness::Unable;
