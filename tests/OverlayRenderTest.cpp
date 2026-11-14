@@ -33,7 +33,12 @@
 #include "Config.hpp"
 #include "Settings.hpp"
 #include "ChatboxPreview.hpp"
+#include "BatteryComponent.hpp"
 #include "Device.hpp"
+#include "DeviceModels.hpp"
+#include "Devices.hpp"
+#include "FakeModelLoader.hpp"
+#include "Form.hpp"
 #include "GpuReadback.hpp"
 #include "Keyboard.hpp"
 #include "Keymap.hpp"
@@ -226,6 +231,47 @@ TEST(OverlayRender, ChatboxPreviewFloatsAboveTheKeyboard)
     RenderOverlay(*preview, "chatbox-preview");
     keyboard.Composer()->FindText("Chat")->Parent()->OnPress(PointerMode::Left);
     g_osc = nullptr;
+}
+
+TEST(OverlayRender, BatteryModelsShowTheDeviceAboveABar)
+{
+    auto loader = std::make_unique<FakeModelLoader>();
+    const auto* calls = loader.get();
+    DeviceModels models(std::move(loader));
+    g_models = &models;
+    g_devices->Update({
+        {.id = 0, .soc = 0.8f, .role = TrackedDeviceRole::Hmd, .model = "cube"},
+        {.id = 1, .soc = 0.15f, .role = TrackedDeviceRole::LeftHand, .model = "cube"},
+        {.id = 2, .soc = 0.5f, .charging = true, .role = TrackedDeviceRole::RightHand, .model = "missing"},
+    });
+
+    auto form = std::make_unique<Form>("batteries");
+    form->SetSize({240.0f, 90.0f});
+    auto& background = form->AddComponent<PanelComponent>("background");
+    background.SetRect({0.0f, 0.0f, 240.0f, 90.0f});
+    background.SetBgColor(FormTheme::Rgba("@panel"));
+    for (size_t device = 0; device < 3; ++device)
+    {
+        auto& battery = form->AddComponent<BatteryComponent>("", device, 0.33f, BatteryStyle::Model);
+        battery.SetRect({(static_cast<float>(device) * 80.0f) + 5.0f, 5.0f, 70.0f, 80.0f});
+        battery.SetColors(FormTheme::Rgba("@teal"), FormTheme::Rgba("@red"), FormTheme::Rgba("@blue"));
+        battery.Label().SetFontSize(16);
+        battery.Label().SetCentered(true);
+    }
+    auto compose = Compose::Create(std::move(form));
+    ASSERT_TRUE(compose.has_value());
+    ASSERT_TRUE((*compose)->ShouldRender().has_value());
+    std::vector<unsigned char> pixels;
+    RenderPixels(**compose, pixels);
+    EXPECT_GE(calls->Calls(), 2U);
+    EXPECT_EQ((*compose)->FindText("H80"), nullptr);
+    EXPECT_EQ((*compose)->FindText("L15"), nullptr);
+    EXPECT_NE((*compose)->FindText("R50"), nullptr);
+    EXPECT_GT(GpuReadback::DistinctColors(pixels), 20U);
+    Png::Write(TestApp::OutputDir() / "battery-models.png", 240, 90, pixels);
+
+    g_devices->Update({});
+    g_models = nullptr;
 }
 
 TEST(OverlayRender, SettingsPanel)

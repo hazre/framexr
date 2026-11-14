@@ -40,6 +40,7 @@ struct BatteryListElement
     float low_threshold = 0.0f;
     size_t num_devices = 0;
     ListLayout layout = ListLayout::Horizontal;
+    BatteryStyle style = BatteryStyle::Text;
     Region region = Region::Form;
     size_t form = 0;
 };

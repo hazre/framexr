@@ -28,6 +28,7 @@
 #include <unordered_map>
 
 #include "Device.hpp"
+#include "DeviceModels.hpp"
 #include "OpenVrInput.hpp"
 #include "OpenVrLines.hpp"
 #include "OpenVrOverlay.hpp"
@@ -65,6 +66,7 @@ class OpenVrRuntime final : public Runtime
     static auto ReadDisplayDensity() -> Eigen::Vector2f;
 
     std::unique_ptr<Device> m_device;
+    std::unique_ptr<DeviceModels> m_models;
     std::unordered_map<OverlayId, OpenVrOverlayData> m_overlay_data;
     OpenVrPlayspace m_playspace;
     std::optional<OpenVrInput> m_input;

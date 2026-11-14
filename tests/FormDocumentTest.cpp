@@ -153,6 +153,7 @@ components:
     num_devices: 4
     layout: Vertical
     low_threshold: 33
+    style: Model
 )";
 
 auto Parse(std::string_view text) -> FormDocument
@@ -263,6 +264,9 @@ TEST(FormDocument, EveryElementAndActionSurvivesASaveAndLoad)
     EXPECT_NE(saved.find("SendOscValue"), std::string::npos);
     EXPECT_NE(saved.find("rect: [0, 0, 300, 100]"), std::string::npos);
     EXPECT_NE(saved.find("width: 120"), std::string::npos);
+    EXPECT_NE(saved.find("style: Model"), std::string::npos);
+    EXPECT_EQ(std::get<BatteryListElement>(reloaded.Components().back()).style, BatteryStyle::Model);
+    EXPECT_EQ(std::get<BatteryElement>(reloaded.Components()[2]).style, BatteryStyle::Text);
 
     const auto& button = std::get<ButtonElement>(reloaded.Components()[4]);
     ASSERT_TRUE(button.data.click_down.has_value());

@@ -36,6 +36,7 @@ if get_option('openvr').allowed()
     'OpenVrLines.cpp',
     'OpenVrManifest.cpp',
     'OpenVrMath.cpp',
+    'OpenVrModels.cpp',
     'OpenVrOverlay.cpp',
     'OpenVrPlayspace.cpp',
     'OpenVrRuntime.cpp',

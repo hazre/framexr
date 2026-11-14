@@ -24,6 +24,7 @@
 #include <functional>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "ButtonComponent.hpp"
 #include "ChoiceGridComponent.hpp"
@@ -491,6 +492,24 @@ auto WatchProperties::AddElement(Editor& editor, size_t index) -> void
         ));
         devices.Plus().SetOnRelease(
             ElementEdit(editor, index, [](FormElement& changed) -> void { ++std::get<BatteryListElement>(changed).num_devices; })
+        );
+        auto& style = m_stack.AddComponent<ChoiceGridComponent>(
+            "style",
+            std::vector<std::string>{"Text", "Model"},
+            static_cast<size_t>(battery->style),
+            2,
+            PanelStyle::kCompactRow
+        );
+        style.SetOnChoose(
+            [&editor, index](size_t chosen) -> void
+            {
+                ElementEdit(
+                    editor,
+                    index,
+                    [chosen](FormElement& changed) -> void
+                    { std::get<BatteryListElement>(changed).style = static_cast<BatteryStyle>(chosen); }
+                )();
+            }
         );
     }
     else if (const auto* sprite = std::get_if<SpriteElement>(&element))

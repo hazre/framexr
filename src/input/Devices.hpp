@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -43,6 +44,7 @@ struct TrackedDevice
     std::optional<float> soc;
     bool charging = false;
     TrackedDeviceRole role = TrackedDeviceRole::None;
+    std::string model;
 };
 
 using DeviceSignal = std::function<void(const TrackedDevice&)>;

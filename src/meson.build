@@ -60,6 +60,7 @@ config_sources = files(
 
 input_sources = files(
   'input/Bindings.cpp',
+  'input/DeviceModels.cpp',
   'input/Devices.cpp',
   'input/Interaction.cpp',
   'input/TextEntry.cpp',
@@ -241,6 +242,7 @@ renderer_sources = files(
   'renderer/Device.cpp',
   'renderer/FontCache.cpp',
   'renderer/Image.cpp',
+  'renderer/ModelSnapshot.cpp',
   'renderer/Pipeline.cpp',
   'renderer/Queue.cpp',
   'renderer/Shaders.cpp',

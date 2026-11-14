@@ -29,6 +29,8 @@
 
 #include "FormComponent.hpp"
 #include "LabelComponent.hpp"
+#include "PanelComponent.hpp"
+#include "SpriteComponent.hpp"
 #include "document/Common.hpp"
 
 struct BatteryElement
@@ -41,6 +43,7 @@ struct BatteryElement
     float low_threshold = 0.0f;
     std::string low_color;
     std::string charging_color;
+    BatteryStyle style = BatteryStyle::Text;
     Region region = Region::Form;
     size_t form = 0;
 };
@@ -53,8 +56,10 @@ class BatteryComponent final : public FormComponent
     static auto Parse(const nlohmann::json& json) -> BatteryElement;
     static auto Serialize(nlohmann::ordered_json& json, const BatteryElement& element) -> void;
     static auto Create(FormComponent& parent, const BatteryElement& element, const FormContext& context) -> BatteryComponent&;
+    static auto ParseStyle(const nlohmann::json& json) -> BatteryStyle;
+    static auto PutStyle(nlohmann::ordered_json& json, BatteryStyle style) -> void;
 
-    BatteryComponent(std::string name, size_t device, float low_threshold);
+    BatteryComponent(std::string name, size_t device, float low_threshold, BatteryStyle style = BatteryStyle::Text);
 
     [[nodiscard]] auto Label() -> LabelComponent& { return m_label; }
     auto SetColors(const Eigen::Vector4f& normal, const Eigen::Vector4f& low, const Eigen::Vector4f& charging) -> void;
@@ -65,9 +70,15 @@ class BatteryComponent final : public FormComponent
     auto Layout() -> void override;
 
   private:
+    auto ShowModel(const std::shared_ptr<Image>& snapshot, float soc, const Eigen::Vector4f& color) -> void;
+
     LabelComponent& m_label;
+    SpriteComponent* m_sprite = nullptr;
+    PanelComponent* m_track = nullptr;
+    PanelComponent* m_fill = nullptr;
     size_t m_device;
     float m_low_threshold;
+    float m_soc = 0.0f;
     Eigen::Vector4f m_normal_color = Eigen::Vector4f::Ones();
     Eigen::Vector4f m_low_color = Eigen::Vector4f::Ones();
     Eigen::Vector4f m_charging_color = Eigen::Vector4f::Ones();

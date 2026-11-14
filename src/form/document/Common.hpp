@@ -37,6 +37,12 @@ enum class ListLayout : uint8_t
     Vertical,
 };
 
+enum class BatteryStyle : uint8_t
+{
+    Text,
+    Model,
+};
+
 using ButtonBinder = std::function<void(FormComponent&, const ButtonData&)>;
 
 struct FormContext

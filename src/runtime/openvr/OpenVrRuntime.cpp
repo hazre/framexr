@@ -35,6 +35,7 @@
 #include "Interaction.hpp"
 #include "Logger.hpp"
 #include "OpenVrManifest.hpp"
+#include "OpenVrModels.hpp"
 #include "Compose.hpp"
 #include "Toast.hpp"
 
@@ -138,6 +139,7 @@ auto OpenVrRuntime::Uninstall() -> void
 
 OpenVrRuntime::~OpenVrRuntime()
 {
+    g_models = nullptr;
     m_lines.reset();
     m_overlay_data.clear();
     Stop();
@@ -152,6 +154,8 @@ auto OpenVrRuntime::Open() -> Result<>
     device_info.required_device_extensions = [](VkPhysicalDevice physical_device) -> std::vector<std::string>
     { return DeviceExtensions(physical_device); };
     ASSIGN_OR_RETURN(m_device, Device::Create(device_info));
+    m_models = std::make_unique<DeviceModels>(std::make_unique<OpenVrModels>());
+    g_models = m_models.get();
     RETURN_IF_ERROR(Start());
 
     if (const auto ipd = ReadIpd())

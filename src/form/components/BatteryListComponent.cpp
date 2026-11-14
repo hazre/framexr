@@ -42,6 +42,7 @@ auto BatteryListComponent::Parse(const nlohmann::json& json) -> BatteryListEleme
         .low_threshold = json.at("low_threshold").get<float>(),
         .num_devices = json.at("num_devices").get<size_t>(),
         .layout = FormParser::Layout(json),
+        .style = BatteryComponent::ParseStyle(json),
     };
 }
 
@@ -55,6 +56,7 @@ auto BatteryListComponent::Serialize(nlohmann::ordered_json& json, const Battery
     json["num_devices"] = element.num_devices;
     FormParser::PutLayout(json, element.layout);
     json["low_threshold"] = Json::ShortestFloat(element.low_threshold);
+    BatteryComponent::PutStyle(json, element.style);
 }
 
 auto BatteryListComponent::Create(FormComponent& parent, const BatteryListElement& element, const FormContext& context)
@@ -72,7 +74,7 @@ auto BatteryListComponent::Create(FormComponent& parent, const BatteryListElemen
     float y = 0.0f;
     for (size_t device = 0; device < element.num_devices; ++device)
     {
-        auto& battery = list.AddComponent<BatteryComponent>("", device, element.low_threshold * 0.01f);
+        auto& battery = list.AddComponent<BatteryComponent>("", device, element.low_threshold * 0.01f, element.style);
         battery.SetRect({x + kInset, y + kInset, cell_w - 2.0f * kInset, cell_h - 2.0f * kInset});
         battery.SetColors(normal, low, charging);
         battery.Label().SetFontSize(element.font_size);

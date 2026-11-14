@@ -258,6 +258,19 @@ auto OpenVrInput::ReadTrackedDevice(vr::TrackedDeviceIndex_t index, TrackedDevic
     {
         return std::nullopt;
     }
+
+    std::array<char, vr::k_unMaxPropertyStringSize> model{};
+    system->GetStringTrackedDeviceProperty(
+        index,
+        vr::Prop_RenderModelName_String,
+        model.data(),
+        static_cast<uint32_t>(model.size()),
+        &error
+    );
+    if (error == vr::TrackedProp_Success)
+    {
+        device.model = model.data();
+    }
     return device;
 }
 
