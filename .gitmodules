@@ -18,7 +18,7 @@
 	url = https://github.com/KhronosGroup/OpenXR-SDK
 [submodule "external/eigen"]
 	path = external/eigen
-	url = https://gitlab.com/libeigen/eigen.git
+	url = https://github.com/Nyabsi/Eigen
 [submodule "external/googletest"]
 	path = external/googletest
 	url = https://github.com/google/googletest
