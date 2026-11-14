@@ -19,6 +19,7 @@
 #include "WindowSource.hpp"
 
 #include "DesktopEntry.hpp"
+#include "ExtWindowSource.hpp"
 #include "KwinWindowSource.hpp"
 #include "Logger.hpp"
 #include "WaylandConnection.hpp"
@@ -35,6 +36,10 @@ auto WindowSource::Create() -> std::shared_ptr<WindowSource>
     if (KwinWindowSource::Supported(**connection))
     {
         return std::make_shared<KwinWindowSource>();
+    }
+    if (ExtWindowSource::Supported(**connection))
+    {
+        return std::make_shared<ExtWindowSource>();
     }
     return nullptr;
 }

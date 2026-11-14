@@ -7,6 +7,9 @@ capture_protocol_headers = []
 capture_protocol_sources = []
 foreach protocol : [
   wayland_protocols_dir / 'unstable/xdg-output/xdg-output-unstable-v1.xml',
+  meson.project_source_root() / 'protocols/ext-foreign-toplevel-list-v1.xml',
+  meson.project_source_root() / 'protocols/ext-image-capture-source-v1.xml',
+  meson.project_source_root() / 'protocols/ext-image-copy-capture-v1.xml',
   meson.project_source_root() / 'protocols/plasma-window-management.xml',
   meson.project_source_root() / 'protocols/wlr-export-dmabuf-unstable-v1.xml',
   meson.project_source_root() / 'protocols/wlr-screencopy-unstable-v1.xml',

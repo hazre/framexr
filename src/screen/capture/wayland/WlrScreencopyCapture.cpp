@@ -21,43 +21,13 @@
 
 #include "WlrScreencopyCapture.hpp"
 
-#include <atomic>
 #include <chrono>
-#include <format>
-#include <optional>
 #include <utility>
-
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "Error.hpp"
 #include "Logger.hpp"
+#include "ShmBuffer.hpp"
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
-
-namespace
-{
-
-auto FourccFromShmFormat(uint32_t format) -> std::optional<uint32_t>
-{
-    switch (format)
-    {
-    case WL_SHM_FORMAT_ARGB8888:
-    case WL_SHM_FORMAT_ABGR8888: return kDrmFormatArgb8888;
-    case WL_SHM_FORMAT_XRGB8888:
-    case WL_SHM_FORMAT_XBGR8888: return kDrmFormatXrgb8888;
-    default: return std::nullopt;
-    }
-}
-
-auto NextShmName() -> std::string
-{
-    static std::atomic<uint32_t> counter{0};
-    return std::format("framexr-{}", counter.fetch_add(1));
-}
-
-} // namespace
 
 WlrScreencopyCapture::WlrScreencopyCapture(std::unique_ptr<WaylandClient> client, uint32_t output_id)
     : m_output_id(output_id),
@@ -134,23 +104,6 @@ auto WlrScreencopyCapture::RequestNewFrame() -> void
     );
 }
 
-auto WlrScreencopyCapture::DestroyBuffer(ScreencopyBuffer& buffer) -> void
-{
-    if (buffer.buffer != nullptr)
-    {
-        wl_buffer_destroy(buffer.buffer);
-    }
-    if (buffer.pool != nullptr)
-    {
-        wl_shm_pool_destroy(buffer.pool);
-    }
-    if (buffer.fd >= 0)
-    {
-        close(buffer.fd);
-    }
-    buffer = {};
-}
-
 auto WlrScreencopyCapture::CaptureFrame(
     std::unique_ptr<WaylandClient> client,
     uint32_t output_id,
@@ -191,12 +144,11 @@ auto WlrScreencopyCapture::CaptureFrame(
         if (wl_display_dispatch(client->Display()) < 0)
         {
             zwlr_screencopy_frame_v1_destroy(request.frame);
-            DestroyBuffer(request.buffer);
             return client;
         }
     }
 
-    if (request.ready && request.has_buffer)
+    if (request.ready && request.buffer)
     {
         if (auto result = processor(Frame(request.mem_frame)))
         {
@@ -208,7 +160,6 @@ auto WlrScreencopyCapture::CaptureFrame(
     {
         LOG_TRACE("{}: Frame failed", name);
     }
-    DestroyBuffer(request.buffer);
     return client;
 }
 
@@ -222,12 +173,12 @@ auto WlrScreencopyCapture::OnBuffer(
 ) -> void
 {
     auto* request = static_cast<ScreencopyRequest*>(data);
-    if (request->has_buffer)
+    if (request->buffer)
     {
         return;
     }
 
-    const auto fourcc = FourccFromShmFormat(format);
+    const auto fourcc = ShmBuffer::Fourcc(format);
     if (!fourcc)
     {
         LOG_WARN("Unsupported screencopy format");
@@ -236,45 +187,26 @@ auto WlrScreencopyCapture::OnBuffer(
         return;
     }
 
-    const auto shm_name = NextShmName();
-    const auto size = stride * height;
-    const int fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    shm_unlink(shm_name.c_str());
-    if (fd < 0 || ftruncate(fd, size) != 0)
+    request->buffer = ShmBuffer::Create(request->client->Shm(), width, height, stride, format);
+    if (!request->buffer)
     {
-        if (fd >= 0)
-        {
-            close(fd);
-        }
         zwlr_screencopy_frame_v1_destroy(frame);
         request->finished = true;
         return;
     }
-
-    request->buffer.fd = fd;
-    request->buffer.pool = wl_shm_create_pool(request->client->Shm(), fd, static_cast<int32_t>(size));
-    request->buffer.buffer = wl_shm_pool_create_buffer(
-        request->buffer.pool,
-        0,
-        static_cast<int32_t>(width),
-        static_cast<int32_t>(height),
-        static_cast<int32_t>(stride),
-        format
-    );
     request->mem_frame = MemFdFrame{
         .format = {.width = width, .height = height, .fourcc = *fourcc, .transform = request->transform},
-        .plane = {.fd = fd, .offset = 0, .stride = static_cast<int32_t>(stride)},
+        .plane = {.fd = request->buffer->Fd(), .offset = 0, .stride = static_cast<int32_t>(stride)},
     };
-    request->has_buffer = true;
     LOG_TRACE("{}: Received screencopy buffer, copying", request->name);
 
     if (request->wait_for_damage)
     {
-        zwlr_screencopy_frame_v1_copy_with_damage(frame, request->buffer.buffer);
+        zwlr_screencopy_frame_v1_copy_with_damage(frame, request->buffer->Buffer());
     }
     else
     {
-        zwlr_screencopy_frame_v1_copy(frame, request->buffer.buffer);
+        zwlr_screencopy_frame_v1_copy(frame, request->buffer->Buffer());
     }
 }
 

@@ -28,18 +28,10 @@
 
 #include "Capture.hpp"
 #include "FrameChannel.hpp"
+#include "ShmBuffer.hpp"
 #include "WaylandClient.hpp"
 
-struct wl_buffer;
-struct wl_shm_pool;
 struct zwlr_screencopy_frame_v1;
-
-struct ScreencopyBuffer
-{
-    wl_shm_pool* pool = nullptr;
-    wl_buffer* buffer = nullptr;
-    int fd = -1;
-};
 
 struct ScreencopyRequest
 {
@@ -49,8 +41,7 @@ struct ScreencopyRequest
     FrameTransform transform = FrameTransform::Undefined;
     bool wait_for_damage = false;
     MemFdFrame mem_frame;
-    ScreencopyBuffer buffer;
-    bool has_buffer = false;
+    std::unique_ptr<ShmBuffer> buffer;
     bool ready = false;
     bool finished = false;
 };
@@ -82,7 +73,6 @@ class WlrScreencopyCapture final : public Capture
         const FrameProcessor& processor,
         bool wait_for_damage
     ) -> std::unique_ptr<WaylandClient>;
-    static auto DestroyBuffer(ScreencopyBuffer& buffer) -> void;
 
     static auto OnBuffer(
         void* data,
